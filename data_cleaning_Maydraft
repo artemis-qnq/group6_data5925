@@ -1,1 +1,132 @@
+#USETHIS
+import pandas as pd
+import numpy as np
+from pathlib import Path
+top_dir = Path("C:/Users/mayha/OneDrive/Documents/UNSW/Term1-2026/DATA5925/DATA_group_6/Features_group_6")
+# C:\Users\mayha\OneDrive\Documents\UNSW\Term1-2026\DATA5925\DATA_group_6\Features_group_6\Features_group_9
+path = Path("C:/Users/mayha/OneDrive/Documents/UNSW/Term1-2026/DATA5925/DATA_group_6")
 
+# for file_path in top_dir.glob("*.txt"):
+#     print(file_path.name)
+
+def read_patient(path):
+    df = pd.read_csv(path)
+    df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
+    t = pd.to_timedelta(df["Time"] + ":00")  # "01:20" -> "01:20:00"
+    df["minute"] = (t.dt.total_seconds() // 60).astype(int)
+    df["hour"] = (df["minute"] // 60).clip(0, 47)  # จำกัด 0..47 ชม.
+    return df
+
+def process_patient(file_path):
+    df0 = read_patient(file_path)    
+    df1 = df0.sort_values(["hour", "minute"])
+    g = df1.groupby(["hour", "Parameter"], as_index=False)["Value"].last() #use lastest 
+    # pivot
+    X = g.pivot(index="hour", columns="Parameter", values="Value")
+    X = X.reindex(range(48))
+    
+    #static variables
+    general_var = ['Age','Gender','Height','ICUType','RecordID']  #some patient weight is not cosistant
+    for col in general_var:
+        if col in X.columns:
+            X[col] = X[col].ffill().bfill()
+
+    record_id = int(file_path.stem)
+    X["RecordID"] = record_id
+    X = X.reset_index()
+    cols = ["RecordID", "hour"] + [c for c in X.columns if c not in ["RecordID", "hour"]]
+    X = X[cols]
+    return X
+
+allpatient = []
+
+for file_path in top_dir.glob("*.txt"):
+    df0 = process_patient(file_path)
+    allpatient.append(df0)
+
+df_features = pd.concat(allpatient, ignore_index=True)
+
+#handle abnormal values
+demo_cols = ["Age", "Gender", "Height", "ICUType"]
+id_cols = ["RecordID", "hour"]
+clinical_cols = [c for c in df_features.columns if c not in id_cols + demo_cols + ["Weight"]]
+print(df_features[clinical_cols].isna().sum())
+
+k = 12
+
+df_features_check_abnormal = df_features.copy()
+
+for col in clinical_cols:
+    mu = df_features_check_abnormal[col].mean(skipna=True)
+    sigma = df_features_check_abnormal[col].std(skipna=True)
+    print(mu,sigma,col)
+
+    # skip since it is no data
+    if pd.isna(sigma) or sigma == 0:
+        continue
+
+    lo, hi = mu - k * sigma, mu + k * sigma
+    outliers_filter = (df_features_check_abnormal[col] < lo) | (df_features_check_abnormal[col] > hi)
+    outliers_data = df_features_check_abnormal.loc[outliers_filter, col]
+
+    if not outliers_data.empty:
+        print(f"--- Found outliers in: {col} ---")
+        print(f"Range: [{lo:.2f}, {hi:.2f}] (mu={mu:.2f}, sigma={sigma:.2f})")
+        print(f"Values to be deleted:\n{outliers_data.values}") # แสดงเฉพาะตัวเลขที่ถูกลบ
+        print(f"Count: {len(outliers_data)} items\n")
+
+    df_features_check_abnormal.loc[outliers_filter, col] = np.nan
+
+df_features_check_abnormal["Weight"] = df_features_check_abnormal["Weight"].where(
+    (df_features_check_abnormal["Weight"] >= 30) & (df_features_check_abnormal["Weight"] <= 200))
+df_features_check_abnormal["Height"] = df_features_check_abnormal["Height"].where(
+    (df_features_check_abnormal["Height"] >= 100) & (df_features_check_abnormal["Height"] <= 250))
+
+print("Missing before abnormal cleaning")
+print(df_features[clinical_cols].isna().sum())
+
+print("Missing after abnormal cleaning")
+print(df_features_check_abnormal[clinical_cols].isna().sum())
+
+
+df_features = df_features_check_abnormal
+# print(df_features[clinical_cols].isna().sum())
+
+#handle missing values
+global_mean_clinical = df_features[clinical_cols].mean(skipna=True)
+
+df_features_2 = df_features.copy()
+df_features_2 = df_features_2.sort_values(["RecordID", "hour"])
+
+df_features_2[clinical_cols] = df_features_2.groupby("RecordID")[clinical_cols].ffill()
+df_features_2[clinical_cols] = df_features_2[clinical_cols].fillna(global_mean_clinical)
+
+#handle demo_values
+for col in demo_cols:
+    df_features_2[col] = df_features_2[col].fillna(df_features_2[col].mean())
+
+#handle weight
+df_features_2["Weight"] = df_features_2.groupby("RecordID")["Weight"].ffill()
+patient_mean_weight = df_features_2.groupby("RecordID")["Weight"].transform("mean")
+df_features_2["Weight"] = df_features_2["Weight"].fillna(patient_mean_weight)
+
+
+# # print(df_features_2[df_features_2["RecordID"] == 142673])
+
+# #REF
+# #print(df_allpatient.loc[df_allpatient["RecordID"] == 142673, ["Weight", "hour"]]) #weight is not consistant 
+# #Weight changes because:
+# # Fluid resuscitation
+# # Diuretics
+# # Measurement error
+
+#MERGE
+df_out = pd.read_csv(path / "Outcomes-6.txt")
+# print(df_allpatient.columns)
+
+df_features2_out = df_features_2.merge(
+    df_out,
+    on="RecordID",
+    how="left")
+
+print(df_features2_out)
