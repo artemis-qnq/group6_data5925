@@ -82,14 +82,15 @@ df_features_check_abnormal["Weight"] = df_features_check_abnormal["Weight"].wher
 df_features_check_abnormal["Height"] = df_features_check_abnormal["Height"].where(
     (df_features_check_abnormal["Height"] >= 100) & (df_features_check_abnormal["Height"] <= 250))
 
-print("Missing before abnormal cleaning")
-print(df_features[clinical_cols].isna().sum())
+#forchecking
+#print("Missing before abnormal cleaning")
+#print(df_features[clinical_cols].isna().sum())
 
-print("Missing after abnormal cleaning")
-print(df_features_check_abnormal[clinical_cols].isna().sum())
-
+#print("Missing after abnormal cleaning")
+#print(df_features_check_abnormal[clinical_cols].isna().sum())
 
 df_features = df_features_check_abnormal
+
 # print(df_features[clinical_cols].isna().sum())
 
 #handle missing values
@@ -109,9 +110,6 @@ for col in demo_cols:
 df_features_2["Weight"] = df_features_2.groupby("RecordID")["Weight"].ffill()
 patient_mean_weight = df_features_2.groupby("RecordID")["Weight"].transform("mean")
 df_features_2["Weight"] = df_features_2["Weight"].fillna(patient_mean_weight)
-
-
-# # print(df_features_2[df_features_2["RecordID"] == 142673])
 
 # #REF
 # #print(df_allpatient.loc[df_allpatient["RecordID"] == 142673, ["Weight", "hour"]]) #weight is not consistant 
