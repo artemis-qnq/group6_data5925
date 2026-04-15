@@ -1,0 +1,148 @@
+{
+  "search_seed": 42,
+  "run_mode": "quick",
+  "search_trials": {
+    "LSTM": 3,
+    "GRU-D": 3,
+    "SVM": 3,
+    "LR": 3
+  },
+  "use_tf_gpu_for_lstm_search": false,
+  "search_spaces": {
+    "LSTM": {
+      "units": [
+        [
+          64
+        ],
+        [
+          128
+        ],
+        [
+          64,
+          32
+        ],
+        [
+          128,
+          64
+        ],
+        [
+          64,
+          48,
+          32
+        ]
+      ],
+      "dropout": [
+        0.3,
+        0.4,
+        0.5
+      ],
+      "lr": [
+        0.01,
+        0.001,
+        0.0005,
+        0.0001
+      ],
+      "batch_size": [
+        32
+      ],
+      "max_epochs": [
+        40
+      ],
+      "patience": [
+        8
+      ]
+    },
+    "GRU-D": {
+      "hidden_size": [
+        32,
+        64,
+        128
+      ],
+      "dropout": [
+        0.2,
+        0.3,
+        0.4,
+        0.5
+      ],
+      "lr": [
+        0.01,
+        0.001,
+        0.0005,
+        0.0001
+      ],
+      "batch_size": [
+        64
+      ],
+      "weight_decay": [
+        0.0001
+      ],
+      "max_epochs": [
+        30
+      ],
+      "patience": [
+        6
+      ]
+    },
+    "SVM": {
+      "kernel": [
+        "linear"
+      ],
+      "C": [
+        0.01,
+        0.1,
+        1.0,
+        10.0,
+        100.0
+      ]
+    },
+    "LR": {
+      "C": [
+        0.01,
+        0.1,
+        1.0,
+        10.0,
+        100.0
+      ],
+      "penalty": [
+        "l2"
+      ],
+      "solver": [
+        "liblinear"
+      ],
+      "max_iter": [
+        5000
+      ]
+    }
+  },
+  "best_configs": {
+    "LSTM": {
+      "units": [
+        64
+      ],
+      "dropout": 0.3,
+      "lr": 0.0005,
+      "batch_size": 32,
+      "max_epochs": 40,
+      "patience": 8
+    },
+    "GRU-D": {
+      "hidden_size": 128,
+      "dropout": 0.2,
+      "lr": 0.01,
+      "batch_size": 64,
+      "weight_decay": 0.0001,
+      "max_epochs": 30,
+      "patience": 6
+    },
+    "SVM": {
+      "kernel": "linear",
+      "C": 0.01
+    },
+    "LR": {
+      "C": 0.01,
+      "penalty": "l2",
+      "solver": "liblinear",
+      "max_iter": 5000
+    }
+  }
+}
